@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Alarmprotokoll — Sauermann Sicherheit</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@300;400;500;600&display=swap');
+
+    /* ── FARBEN: Sauermann Dashboard — Dark Navy + Rot ── */
+    :root {
+      --navy:      #0F1C2E;
+      --navy2:     #162235;
+      --navy3:     #1A2D45;
+      --accent:    #E63329;
+      --accent-dk: #c42a21;
+      --body-bg:   #0F1C2E;
+      --card-bg:   #162235;
+      --border:    #1E3148;
+      --gray:      #8BA3BC;
+      --lgray:     #5C7A99;
+      --row1:      #1A2D45;
+      --row2:      #132030;
+      --text-main: #E8EFF8;
+      --text-muted:#8BA3BC;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Barlow', sans-serif; background: var(--body-bg); color: var(--text-main); min-height: 100vh; }
+
+    /* ══ PASSWORT-SCREEN ═══════════════════════════════════════ */
+    #pw-screen {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(145deg, #1B2E4B 0%, #243d63 60%, #162440 100%);
+      padding: 24px;
+    }
+
+    .pw-logo-wrap { margin-bottom: 40px; text-align: center; }
+    .pw-logo-wrap img {
+      height: 42px;
+      filter: brightness(0) invert(1);
+    }
+    .pw-logo-fb {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.4rem; font-weight: 800;
+      color: white; letter-spacing: 1.5px;
+      display: none;
+    }
+
+    .pw-box {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.12);
+      backdrop-filter: blur(12px);
+      border-radius: 16px;
+      padding: 40px 32px;
+      width: 100%; max-width: 380px;
+      text-align: center;
+    }
+
+    .pw-shield {
+      width: 60px; height: 60px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 22px;
+      font-size: 1.5rem;
+      box-shadow: 0 4px 20px rgba(27,46,75,0.4);
+    }
+
+    .pw-title { font-family: 'Barlow Condensed', sans-serif; font-size: 1.5rem; font-weight: 700; color: #fff; margin-bottom: 6px; }
+    .pw-sub   { font-size: 0.82rem; color: rgba(255,255,255,0.5); margin-bottom: 28px; line-height: 1.5; }
+
+    .pw-field { position: relative; margin-bottom: 14px; }
+    .pw-field input {
+      width: 100%;
+      padding: 13px 44px 13px 16px;
+      background: rgba(0,0,0,0.3);
+      border: 1.5px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      color: #fff;
+      font-family: 'Barlow', sans-serif;
+      font-size: 1rem;
+      letter-spacing: 2px;
+      transition: border-color 0.2s;
+    }
+    .pw-field input:focus { outline: none; border-color: var(--accent); }
+    .pw-eye {
+      position: absolute; right: 14px; top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer; color: rgba(255,255,255,0.4);
+      font-size: 1rem; user-select: none;
+    }
+
+    .pw-btn {
+      width: 100%; padding: 13px;
+      background: var(--accent);
+      color: white; border: none; border-radius: 8px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.1rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+      cursor: pointer; transition: background 0.2s;
+      box-shadow: 0 4px 16px rgba(27,46,75,0.35);
+    }
+    .pw-btn:hover { background: var(--accent-dk); }
+
+    .pw-error   { margin-top: 12px; color: #ff8080; font-size: 0.82rem; display: none; }
+    .pw-counter { margin-top: 8px; color: rgba(255,255,255,0.3); font-size: 0.74rem; }
+
+    /* ══ APP ═════════════════════════════════════════════════════ */
+    #app { display: none; }
+
+    header {
+      background: var(--navy);
+      height: 62px; padding: 0 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 2px 20px rgba(27,46,75,0.4);
+      border-bottom: 2px solid var(--accent);
+    }
+
+    header img {
+      height: 32px;
+      filter: brightness(0) invert(1);
+    }
+    .h-logo-fb {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.15rem; font-weight: 800;
+      color: white; letter-spacing: 1px; display: none;
+    }
+
+    .h-right { display: flex; align-items: center; gap: 10px; }
+    .h-badge {
+      background: var(--accent);
+      color: white; font-size: 0.65rem; font-weight: 700;
+      padding: 4px 10px; border-radius: 20px;
+      letter-spacing: 1px; text-transform: uppercase;
+    }
+
+    main { max-width: 660px; margin: 0 auto; padding: 28px 16px 72px; }
+
+    .page-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 2.1rem; font-weight: 800;
+      letter-spacing: 0.5px; color: var(--text-main);
+      margin-bottom: 4px;
+    }
+    .page-sub { color: var(--text-muted); font-size: 0.88rem; margin-bottom: 22px; }
+
+    /* ── CARDS ─────────────────────────────────────────────────── */
+    .card {
+      background: var(--card-bg);
+      border-radius: 8px;
+      padding: 22px 20px;
+      margin-bottom: 14px;
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+    }
+
+    .card-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700; font-size: 0.75rem;
+      letter-spacing: 1.8px; text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .field-group { display: flex; flex-direction: column; gap: 13px; }
+    .field-row   { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    label.fl {
+      display: block; font-size: 0.73rem; font-weight: 600;
+      color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: 0.8px; margin-bottom: 5px;
+    }
+    .req { color: var(--accent); }
+
+    input[type="text"], input[type="date"], input[type="time"],
+    input[type="email"], textarea, select {
+      width: 100%;
+      padding: 10px 13px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: 'Barlow', sans-serif;
+      font-size: 0.93rem;
+      color: var(--text-main);
+      background: var(--row1);
+      transition: border-color 0.18s, box-shadow 0.18s;
+      -webkit-appearance: none;
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(230,51,41,0.25);
+      background: var(--navy3);
+    }
+    textarea { resize: vertical; min-height: 76px; }
+
+    /* ── SZENARIO ──────────────────────────────────────────────── */
+    .sc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    .sc-card {
+      border: 1px solid var(--border);
+      border-radius: 6px; padding: 14px 12px 12px;
+      cursor: pointer; background: var(--row1);
+      position: relative; transition: all 0.15s; user-select: none;
+    }
+    .sc-card:hover { border-color: var(--accent); background: var(--navy3); }
+    .sc-card.active {
+      border-color: var(--accent); background: var(--navy3);
+      box-shadow: 0 0 0 2px rgba(230,51,41,0.3);
+    }
+    .sc-card input { position: absolute; opacity: 0; width: 0; height: 0; }
+
+    .sc-dot {
+      position: absolute; top: 10px; right: 10px;
+      width: 18px; height: 18px; border-radius: 50%;
+      border: 2px solid var(--border); background: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.6rem; color: white; transition: all 0.15s;
+    }
+    .sc-card.active .sc-dot { background: var(--accent); border-color: var(--accent); }
+    .sc-card.active .sc-dot::after { content: '✓'; }
+
+    .sc-num {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.6rem; font-weight: 800;
+      color: var(--accent); line-height: 1; margin-bottom: 4px;
+    }
+    .sc-ico { font-size: 1rem; margin-bottom: 4px; }
+    .sc-lbl { font-size: 0.78rem; font-weight: 600; color: var(--text-main); line-height: 1.4; }
+
+    /* ── UPLOAD ────────────────────────────────────────────────── */
+    .upload-zone {
+      border: 1px dashed var(--border);
+      border-radius: 6px; padding: 24px 16px;
+      text-align: center; cursor: pointer; background: var(--row1);
+      transition: all 0.18s;
+    }
+    .upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: #1e3552; }
+    .upload-zone input { display: none; }
+    .upload-ico  { font-size: 2rem; margin-bottom: 6px; }
+    .upload-txt  { font-size: 0.88rem; color: var(--text-muted); font-weight: 500; }
+    .upload-hint { font-size: 0.74rem; color: var(--lgray); margin-top: 3px; }
+
+    #preview-wrap { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+    .prev-img {
+      width: 76px; height: 76px; object-fit: cover;
+      border-radius: 6px; border: 2px solid var(--border);
+      cursor: pointer; transition: opacity 0.15s;
+    }
+    .prev-img:hover { opacity: 0.65; }
+
+    /* ── INFO CARD ─────────────────────────────────────────────── */
+    .info-card {
+      background: var(--navy);
+      border-radius: 12px; padding: 18px 20px;
+      margin-bottom: 14px;
+      border: 1px solid var(--border);
+    }
+    .info-card .card-title { color: rgba(255,255,255,0.5); border-color: rgba(255,255,255,0.08); }
+    .info-card p { font-size: 0.88rem; color: rgba(255,255,255,0.65); line-height: 1.65; }
+    .info-card strong { color: #fff; }
+    .info-card small  { color: rgba(255,255,255,0.35); font-size: 0.76rem; }
+
+    /* ── BUTTON ────────────────────────────────────────────────── */
+    .btn-primary {
+      width: 100%; padding: 15px;
+      background: var(--accent); color: white; border: none;
+      border-radius: 9px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.15rem; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase;
+      cursor: pointer; transition: background 0.2s, transform 0.1s;
+      margin-top: 6px;
+      box-shadow: 0 4px 16px rgba(27,46,75,0.3);
+    }
+    .btn-primary:hover   { background: var(--accent-dk); }
+    .btn-primary:active  { transform: scale(0.985); }
+    .btn-primary:disabled { background: #a0aec0; cursor: not-allowed; box-shadow: none; }
+
+    /* ── SPINNER ───────────────────────────────────────────────── */
+    .spinner-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(27,46,75,0.65);
+      z-index: 999; align-items: center; justify-content: center;
+      flex-direction: column; gap: 14px;
+    }
+    .spinner-overlay.show { display: flex; }
+    .spinner {
+      width: 44px; height: 44px;
+      border: 4px solid rgba(255,255,255,0.15);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner-txt { color: white; font-size: 0.9rem; font-weight: 500; }
+
+    /* ── SUCCESS ───────────────────────────────────────────────── */
+    #success { display: none; text-align: center; padding: 40px 16px; }
+
+    .succ-icon {
+      width: 72px; height: 72px; background: #1a7a3c;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 1.9rem; margin: 0 auto 20px;
+      box-shadow: 0 4px 20px rgba(22,163,74,0.35);
+    }
+    .succ-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.8rem; font-weight: 800; color: var(--text-main); margin-bottom: 8px;
+    }
+    .succ-txt { color: var(--text-muted); font-size: 0.92rem; line-height: 1.6; }
+
+    .action-btns { display: flex; flex-direction: column; gap: 10px; margin-top: 28px; }
+    .btn-act {
+      padding: 14px 20px; border-radius: 9px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.05rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+      cursor: pointer; border: none; transition: all 0.18s;
+    }
+    .btn-dl   { background: var(--navy3); color: white; border: 1px solid var(--border); }
+    .btn-dl:hover { background: var(--border); }
+    .btn-reset {
+      background: transparent; color: var(--text-muted);
+      border: 2px solid var(--border);
+      padding: 12px 20px; border-radius: 9px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.95rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+      cursor: pointer;
+    }
+
+    /* ── SETUP BANNER ──────────────────────────────────────────── */
+    .setup-banner {
+      background: #1E2F1A;
+      border: 1px solid #2D4A26;
+      border-radius: 6px; padding: 14px 16px;
+      font-size: 0.84rem; color: #86B87A;
+      margin-bottom: 14px; line-height: 1.6;
+    }
+    .setup-banner strong { color: #a3e097; }
+    .setup-banner.hidden { display: none; }
+
+    @media (max-width: 480px) {
+      .field-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ PASSWORT ══════════════════════════════════════════════ -->
+<div id="pw-screen">
+  <div class="pw-logo-wrap">
+    <img src="https://sicherheitsdienst-sauermann.de/wp-content/uploads/2021/03/Sauermann-Logo.svg"
+         alt="Sauermann" onerror="this.style.display='none'; document.querySelector('.pw-logo-fb').style.display='block'" />
+    <div class="pw-logo-fb">SAUERMANN SICHERHEIT</div>
+  </div>
+
+  <div class="pw-box">
+    <div class="pw-shield">🔒</div>
+    <div class="pw-title">Interner Bereich</div>
+    <div class="pw-sub">Nur für autorisierte Mitarbeiter.<br>Bitte Zugangscode eingeben.</div>
+
+    <div class="pw-field">
+      <input type="password" id="pw-input" placeholder="Passwort eingeben"
+             onkeydown="if(event.key==='Enter') checkPw()" />
+      <span class="pw-eye" onclick="togglePw()">👁</span>
+    </div>
+    <button class="pw-btn" onclick="checkPw()">Zugang bestätigen →</button>
+    <div class="pw-error"  id="pw-error">❌ Falsches Passwort</div>
+    <div class="pw-counter" id="pw-counter"></div>
+  </div>
+</div>
+
+<!-- ══ SPINNER ═══════════════════════════════════════════════ -->
+<div class="spinner-overlay" id="spinner">
+  <div class="spinner"></div>
+  <div class="spinner-txt" id="spinner-txt">PDF wird erstellt…</div>
+</div>
+
+<!-- ══ APP ═══════════════════════════════════════════════════ -->
+<div id="app">
+
+  <header>
+    <img src="https://sicherheitsdienst-sauermann.de/wp-content/uploads/2021/03/Sauermann-Logo.svg"
+         alt="Sauermann"
+         onerror="this.style.display='none'; document.querySelector('.h-logo-fb').style.display='block'" />
+    <div class="h-logo-fb">SAUERMANN SICHERHEIT</div>
+    <div class="h-right">
+      <div class="h-badge">Intern</div>
+    </div>
+  </header>
+
+  <main>
+
+    <div class="setup-banner" id="setup-banner">
+      ⚙️ <strong>Einmalige Einrichtung erforderlich:</strong> Damit E-Mails automatisch versendet werden,
+      müssen 3 IDs von EmailJS eingetragen werden.
+      <a href="#" onclick="document.getElementById('setup-info').style.display='block'; return false;"
+         style="color:#E63329; font-weight:600;">Anleitung anzeigen →</a>
+    </div>
+
+    <div id="setup-info" style="display:none; background:#0d1f38; border:1.5px solid #1e3a5f; border-radius:10px; padding:16px; margin-bottom:14px; font-size:0.83rem; color:#a8c4d4; line-height:1.7;">
+      <strong style="color:#fff;">EmailJS kostenlos einrichten (5 Minuten):</strong><br>
+      1. Gehe zu <a href="https://www.emailjs.com" target="_blank" style="color:#E63329;">emailjs.com</a> → kostenlosen Account erstellen<br>
+      2. "Add New Service" → Gmail oder GMX → verbinden → <strong>Service ID</strong> kopieren<br>
+      3. "Email Templates" → neues Template → Betreff: <code style="background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:3px;">Neues Alarmprotokoll</code> → Body: <code style="background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:3px;">{{message}}</code> → <strong>Template ID</strong> kopieren<br>
+      4. Oben rechts auf deinen Account → <strong>Public Key</strong> kopieren<br>
+      5. Unten im Code die drei Werte eintragen bei <code style="background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:3px;">EMAILJS_SERVICE_ID</code>, <code style="background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:3px;">EMAILJS_TEMPLATE_ID</code>, <code style="background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:3px;">EMAILJS_PUBLIC_KEY</code><br>
+      <small style="color:#6a8fa3;">→ Kostenlos bis 200 E-Mails/Monat. Kein Server nötig.</small>
+    </div>
+
+    <!-- FORM VIEW -->
+    <div id="form-view">
+      <h1 class="page-title">Alarmprotokoll</h1>
+      <p class="page-sub">Ereignis dokumentieren — PDF wird erstellt und automatisch per E-Mail gesendet</p>
+
+      <!-- 1 EINSATZDATEN -->
+      <div class="card">
+        <div class="card-title">📍 Einsatzdaten</div>
+        <div class="field-group">
+          <div>
+            <label class="fl">Baustelle / Ort <span class="req">*</span></label>
+            <input type="text" id="baustelle" placeholder="z. B. Baustelle Hauptstraße 12, Hamburg" />
+          </div>
+          <div class="field-row">
+            <div>
+              <label class="fl">Datum <span class="req">*</span></label>
+              <input type="date" id="datum" />
+            </div>
+            <div>
+              <label class="fl">Uhrzeit <span class="req">*</span></label>
+              <input type="time" id="uhrzeit" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2 SZENARIO -->
+      <div class="card">
+        <div class="card-title">⚡ Szenario <span class="req">*</span></div>
+        <div class="sc-grid">
+          <label class="sc-card" id="sc1" onclick="setSc(1)">
+            <input type="radio" name="sc" value="1"/>
+            <div class="sc-dot"></div>
+            <div class="sc-ico">👤</div>
+            <div class="sc-num">S1</div>
+            <div class="sc-lbl">1 Person — hat reagiert &amp; Bereich verlassen</div>
+          </label>
+          <label class="sc-card" id="sc2" onclick="setSc(2)">
+            <input type="radio" name="sc" value="2"/>
+            <div class="sc-dot"></div>
+            <div class="sc-ico">👥</div>
+            <div class="sc-num">S2</div>
+            <div class="sc-lbl">Mehrere Personen — haben reagiert</div>
+          </label>
+          <label class="sc-card" id="sc3" onclick="setSc(3)">
+            <input type="radio" name="sc" value="3"/>
+            <div class="sc-dot"></div>
+            <div class="sc-ico">🚔</div>
+            <div class="sc-num">S3</div>
+            <div class="sc-lbl">1 Person — NICHT reagiert, Polizei gerufen</div>
+          </label>
+          <label class="sc-card" id="sc4" onclick="setSc(4)">
+            <input type="radio" name="sc" value="4"/>
+            <div class="sc-dot"></div>
+            <div class="sc-ico">🚨</div>
+            <div class="sc-num">S4</div>
+            <div class="sc-lbl">Mehrere Personen — NICHT reagiert, Polizei</div>
+          </label>
+        </div>
+      </div>
+
+      <!-- 3 DETAILS -->
+      <div class="card">
+        <div class="card-title">👤 Mitarbeiter &amp; Details</div>
+        <div class="field-group">
+          <div>
+            <label class="fl">Name des Meldenden</label>
+            <input type="text" id="mitarbeiter" placeholder="Vor- und Nachname" />
+          </div>
+          <div>
+            <label class="fl">Anzahl betroffener Personen</label>
+            <input type="text" id="anzahl" placeholder="z. B. 1 Person / 3 Personen" />
+          </div>
+          <div>
+            <label class="fl">Beschreibung des Vorfalls</label>
+            <textarea id="beschreibung" placeholder="Was ist genau passiert?…"></textarea>
+          </div>
+          <div>
+            <label class="fl">Ergriffene Maßnahmen</label>
+            <textarea id="massnahmen" placeholder="Welche Maßnahmen wurden ergriffen?…"></textarea>
+          </div>
+          <div>
+            <label class="fl">Polizei eingesetzt?</label>
+            <select id="polizei">
+              <option value="Nein">Nein</option>
+              <option value="Ja — Polizei verständigt">Ja — Polizei verständigt</option>
+              <option value="Ja — Polizei war vor Ort">Ja — Polizei war vor Ort</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4 FOTOS -->
+      <div class="card">
+        <div class="card-title">📷 Fotodokumentation</div>
+        <div class="upload-zone" id="upload-zone"
+             onclick="document.getElementById('foto-input').click()"
+             ondragover="event.preventDefault(); this.classList.add('drag')"
+             ondragleave="this.classList.remove('drag')"
+             ondrop="this.classList.remove('drag'); handleDrop(event)">
+          <input type="file" id="foto-input" accept="image/*" multiple onchange="handleFiles(this.files)"/>
+          <div class="upload-ico">📁</div>
+          <div class="upload-txt">Fotos auswählen oder hierher ziehen</div>
+          <div class="upload-hint">JPG / PNG · mehrere Bilder möglich · Klick aufs Bild zum Entfernen</div>
+        </div>
+        <div id="preview-wrap"></div>
+      </div>
+
+      <!-- 5 VERSAND-INFO -->
+      <div class="info-card card">
+        <div class="card-title">📧 Automatischer Versand</div>
+        <p>
+          Das PDF-Protokoll wird nach dem Absenden direkt an<br>
+          <strong>Franka.sanders@gmx.de</strong> gesendet.<br>
+          <small>Mark Sauermann prüft und gibt die Kunden-E-Mail danach frei.</small>
+        </p>
+      </div>
+
+      <button class="btn-primary" id="submit-btn" onclick="submitForm()">
+        ✅ Protokoll erstellen &amp; E-Mail senden
+      </button>
+    </div>
+
+    <!-- SUCCESS VIEW -->
+    <div id="success">
+      <div class="succ-icon">✓</div>
+      <h2 class="succ-title" id="succ-title">Protokoll gesendet!</h2>
+      <p class="succ-txt" id="succ-txt">Das PDF wurde erfolgreich an<br><strong>Franka.sanders@gmx.de</strong> gesendet.</p>
+      <div class="action-btns">
+        <button class="btn-act btn-dl" onclick="downloadPDF()">📄 PDF herunterladen</button>
+        <button class="btn-reset" onclick="resetForm()">↩ Neues Protokoll erstellen</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+//  ⚙️  HIER EMAILJS-IDs EINTRAGEN  (einmalige Einrichtung)
+// ════════════════════════════════════════════════════════════
+const EMAILJS_SERVICE_ID  = 'DEINE_SERVICE_ID';
+const EMAILJS_TEMPLATE_ID = 'DEINE_TEMPLATE_ID';
+const EMAILJS_PUBLIC_KEY  = 'DEIN_PUBLIC_KEY';
+// ════════════════════════════════════════════════════════════
+
+const CONFIGURED = !EMAILJS_PUBLIC_KEY.startsWith('DEIN');
+
+if (CONFIGURED) {
+  emailjs.init(EMAILJS_PUBLIC_KEY);
+  document.getElementById('setup-banner').classList.add('hidden');
+}
+
+// ── PASSWORT ─────────────────────────────────────────────────
+let pwAttempts = 0;
+
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function checkPw() {
+  const val = document.getElementById('pw-input').value;
+  const h   = await sha256(val);
+  const ok  = await sha256('Sauer#2025!');
+  if (h === ok) {
+    document.getElementById('pw-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    initForm();
+  } else {
+    pwAttempts++;
+    const errEl = document.getElementById('pw-error');
+    errEl.style.display = 'block';
+    errEl.textContent = '❌ Falsches Passwort';
+    document.getElementById('pw-input').value = '';
+    if (pwAttempts >= 3) {
+      document.getElementById('pw-counter').textContent = `${pwAttempts} fehlgeschlagene Versuche`;
+    }
+  }
+}
+
+function togglePw() {
+  const i = document.getElementById('pw-input');
+  i.type = i.type === 'password' ? 'text' : 'password';
+}
+
+// ── INIT ─────────────────────────────────────────────────────
+function initForm() {
+  const n = new Date();
+  document.getElementById('datum').value = n.toISOString().split('T')[0];
+  document.getElementById('uhrzeit').value =
+    String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0');
+}
+
+// ── SZENARIO ──────────────────────────────────────────────────
+let currentSc = null;
+function setSc(n) {
+  [1,2,3,4].forEach(i => document.getElementById('sc'+i).classList.remove('active'));
+  document.getElementById('sc'+n).classList.add('active');
+  document.getElementById('sc'+n).querySelector('input').checked = true;
+  currentSc = n;
+}
+
+// ── BILDER ────────────────────────────────────────────────────
+let images = [];
+function handleDrop(e) { e.preventDefault(); handleFiles(e.dataTransfer.files); }
+function handleFiles(files) {
+  Array.from(files).forEach(f => {
+    if (!f.type.startsWith('image/')) return;
+    const r = new FileReader();
+    r.onload = e => { images.push(e.target.result); renderPreviews(); };
+    r.readAsDataURL(f);
+  });
+}
+function renderPreviews() {
+  const w = document.getElementById('preview-wrap');
+  w.innerHTML = '';
+  images.forEach((src, i) => {
+    const img = document.createElement('img');
+    img.src = src; img.className = 'prev-img';
+    img.title = 'Klicken zum Entfernen';
+    img.onclick = () => { images.splice(i,1); renderPreviews(); };
+    w.appendChild(img);
+  });
+}
+
+// ── STATE ─────────────────────────────────────────────────────
+let pdfDoc = null, pdfFilename = '', pdfB64 = '';
+
+// ── SUBMIT ────────────────────────────────────────────────────
+async function submitForm() {
+  const baustelle = document.getElementById('baustelle').value.trim();
+  const datum     = document.getElementById('datum').value;
+  const uhrzeit   = document.getElementById('uhrzeit').value;
+
+  if (!baustelle) { alert('Bitte Baustelle / Ort eingeben.'); return; }
+  if (!datum)     { alert('Bitte Datum eingeben.'); return; }
+  if (!uhrzeit)   { alert('Bitte Uhrzeit eingeben.'); return; }
+  if (!currentSc) { alert('Bitte ein Szenario auswählen.'); return; }
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+
+  setSpinner(true, 'PDF wird erstellt…');
+  await sleep(60);
+
+  const data = {
+    baustelle,
+    datum:        fmtDate(datum),
+    datumRaw:     datum,
+    uhrzeit,
+    szenario:     currentSc,
+    mitarbeiter:  document.getElementById('mitarbeiter').value.trim() || '—',
+    anzahl:       document.getElementById('anzahl').value.trim()      || '—',
+    beschreibung: document.getElementById('beschreibung').value.trim(),
+    massnahmen:   document.getElementById('massnahmen').value.trim(),
+    polizei:      document.getElementById('polizei').value,
+  };
+
+  buildPDF(data);
+
+  if (CONFIGURED) {
+    setSpinner(true, 'E-Mail wird gesendet…');
+    await sleep(100);
+    try {
+      await sendEmail(data);
+      document.getElementById('succ-title').textContent = 'Protokoll gesendet!';
+      document.getElementById('succ-txt').innerHTML =
+        'Das PDF wurde erfolgreich an<br><strong>Franka.sanders@gmx.de</strong> gesendet.';
+    } catch(e) {
+      document.getElementById('succ-title').textContent = 'PDF erstellt';
+      document.getElementById('succ-txt').innerHTML =
+        `E-Mail-Versand fehlgeschlagen.<br>Bitte PDF manuell herunterladen und weiterleiten.<br><small style="color:#e53e3e">${e.text || e}</small>`;
+      console.error(e);
+    }
+  } else {
+    document.getElementById('succ-title').textContent = 'PDF erstellt';
+    document.getElementById('succ-txt').innerHTML =
+      'EmailJS noch nicht eingerichtet.<br>Bitte PDF herunterladen und manuell senden.';
+  }
+
+  setSpinner(false);
+  document.getElementById('form-view').style.display = 'none';
+  document.getElementById('success').style.display   = 'block';
+  window.scrollTo(0,0);
+}
+
+// ── E-MAIL SENDEN ────────────────────────────────────────────
+async function sendEmail(d) {
+  const scLabels = ['','Einzelperson – hat reagiert','Mehrere Personen – haben reagiert',
+                    'Einzelperson – NICHT reagiert, Polizei','Mehrere Personen – NICHT reagiert, Polizei'];
+  const params = {
+    to_email:    'Franka.sanders@gmx.de',
+    to_name:     'Franka Sanders',
+    subject:     `Alarmprotokoll – S${d.szenario} – ${d.baustelle} – ${d.datum}`,
+    message:
+`Neues Alarmprotokoll eingegangen:
+
+📍 Baustelle:      ${d.baustelle}
+📅 Datum:          ${d.datum}
+🕐 Uhrzeit:        ${d.uhrzeit} Uhr
+⚡ Szenario:       S${d.szenario} – ${scLabels[d.szenario]}
+👤 Mitarbeiter:    ${d.mitarbeiter}
+👥 Anz. Personen:  ${d.anzahl}
+🚔 Polizei:        ${d.polizei}
+
+Beschreibung:
+${d.beschreibung || '(keine Angabe)'}
+
+Maßnahmen:
+${d.massnahmen || '(keine Angabe)'}
+
+---
+Bitte PDF aus dem Anhang prüfen und Kunden-E-Mail freigeben.
+Sauermann Sicherheit – Internes Alarmprotokoll-System`,
+    pdf_name:    pdfFilename,
+    pdf_data:    pdfB64,
+  };
+  return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, params);
+}
+
+// ── PDF BUILDER ───────────────────────────────────────────────
+function buildPDF(d) {
+  const { jsPDF } = window.jspdf;
+  const doc  = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+  const PW   = 210, MAR = 14, CW = 210 - 28;
+  const NAVY = [15,28,46], BLUE=[26,45,69], ACC=[230,51,41];
+  const WHITE=[255,255,255], GRAY=[139,163,188], LGRAY=[92,122,153];
+  const ROW1=[22,34,53], ROW2=[19,32,48];
+
+  let y = 0;
+
+  // HEADER
+  doc.setFillColor(...NAVY);
+  doc.rect(0, 0, PW, 34, 'F');
+  doc.setFillColor(...ACC);
+  doc.rect(0, 32.5, PW, 1.5, 'F');
+  doc.setFillColor(...ACC);
+  doc.rect(0, 0, 5, 34, 'F');
+
+  doc.setTextColor(...WHITE);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(14);
+  doc.text('SAUERMANN SICHERHEIT', 12, 13);
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(...LGRAY);
+  doc.text('SICHERHEITSDIENST  ·  SEIT 1996', 12, 20);
+
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(13);
+  doc.setTextColor(...WHITE);
+  doc.text('ALARMPROTOKOLL', PW - MAR, 13, { align:'right' });
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(...LGRAY);
+  const nr = `AP-${d.datumRaw.replace(/-/g,'')}-S${d.szenario}`;
+  doc.text(`Nr.: ${nr}  ·  ${d.datum}  ·  ${d.uhrzeit} Uhr`, PW - MAR, 20, { align:'right' });
+
+  y = 40;
+
+  // SZENARIO BADGE
+  const scL = ['','Einzelperson – reagiert & Bereich verlassen','Mehrere Personen – haben reagiert',
+               'Einzelperson – NICHT reagiert, Polizei hinzugezogen','Mehrere Personen – NICHT reagiert, Polizei'];
+
+  doc.setFillColor(238, 243, 251);
+  doc.roundedRect(MAR, y, CW, 18, 2, 2, 'F');
+  doc.setFillColor(...ACC);
+  doc.roundedRect(MAR, y, 22, 18, 2, 2, 'F');
+  doc.rect(MAR+11, y, 11, 18, 'F');
+
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(14);
+  doc.setTextColor(...WHITE);
+  doc.text(`S${d.szenario}`, MAR+11, y+12, { align:'center' });
+
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...BLUE);
+  doc.text(`SZENARIO ${d.szenario}`, MAR+26, y+7);
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(230,51,41);
+  doc.text(scL[d.szenario], MAR+26, y+14);
+
+  y += 24;
+
+  // DATENTABELLE
+  const rows = [
+    ['BAUSTELLE / ORT',       d.baustelle],
+    ['DATUM',                  d.datum],
+    ['UHRZEIT',                `${d.uhrzeit} Uhr`],
+    ['MELDENDER MITARBEITER',  d.mitarbeiter],
+    ['ANZAHL BETROFFENER',     d.anzahl],
+    ['POLIZEI EINGESETZT',     d.polizei],
+  ];
+  const rh = 9;
+  rows.forEach(([k,v], i) => {
+    const ry = y + i * rh;
+    doc.setFillColor(...(i%2===0 ? ROW1 : ROW2));
+    doc.rect(MAR, ry, CW, rh, 'F');
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(...GRAY);
+    doc.text(k, MAR+3, ry+6);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(9);
+    doc.setTextColor(232,239,248);
+    doc.text(String(v||'—'), MAR+68, ry+6);
+  });
+  doc.setDrawColor(...ROW2);
+  doc.setLineWidth(0.3);
+  doc.rect(MAR, y, CW, rh*rows.length);
+  y += rh*rows.length + 8;
+
+  // TEXT-BLÖCKE
+  function textBox(title, text, ty) {
+    if (!text) return ty;
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(8);
+    doc.setTextColor(...GRAY);
+    doc.text(title, MAR, ty);
+    ty += 5;
+    const lines = doc.splitTextToSize(text, CW-8);
+    const bh = lines.length*5+8;
+    doc.setFillColor(...ROW1);
+    doc.setDrawColor(...ROW2);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(MAR, ty, CW, bh, 1.5, 1.5, 'FD');
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(232,239,248);
+    lines.forEach((l,li) => doc.text(l, MAR+4, ty+6+li*5));
+    return ty+bh+7;
+  }
+  y = textBox('BESCHREIBUNG DES VORFALLS', d.beschreibung, y);
+  y = textBox('ERGRIFFENE MASSNAHMEN', d.massnahmen, y);
+
+  // FOTOS
+  if (images.length > 0) {
+    if (y > 200) { doc.addPage(); y = 16; }
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(8);
+    doc.setTextColor(...GRAY);
+    doc.text('FOTODOKUMENTATION', MAR, y);
+    y += 5;
+    const IW = (CW-6)/3, IH = IW*0.72;
+    let xi = 0;
+    images.forEach(src => {
+      const bx = MAR + xi*(IW+3);
+      if (y+IH > 278) { doc.addPage(); y=16; xi=0; }
+      try {
+        doc.addImage(src,'JPEG',bx,y,IW,IH,'','MEDIUM');
+        doc.setDrawColor(30,49,72); doc.setLineWidth(0.3);
+        doc.rect(bx,y,IW,IH);
+      } catch(e){}
+      xi++;
+      if (xi===3){ xi=0; y+=IH+3; }
+    });
+    if (xi>0) y+=IH+3;
+    y+=4;
+  }
+
+  // UNTERSCHRIFT
+  if (y > 248) { doc.addPage(); y=16; }
+  doc.setDrawColor(180,190,210); doc.setLineWidth(0.4);
+  doc.line(MAR, y+14, MAR+60, y+14);
+  doc.line(MAR+80, y+14, MAR+140, y+14);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...LGRAY);
+  doc.text('Datum / Unterschrift Mitarbeiter', MAR, y+19);
+  doc.text('Datum / Freigabe Mark Sauermann', MAR+80, y+19);
+
+  // FOOTER
+  const pages = doc.internal.getNumberOfPages();
+  for (let p=1; p<=pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(...NAVY);
+    doc.rect(0, 287, PW, 10, 'F');
+    doc.setFillColor(...ACC); doc.rect(0,287,PW,1,'F');
+    doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(...LGRAY);
+    doc.text('Sauermann Sicherheit GmbH  ·  Alarmprotokoll  ·  Intern / Vertraulich', MAR, 293);
+    doc.text(`${d.datum}  ·  Seite ${p} / ${pages}`, PW-MAR, 293, { align:'right' });
+  }
+
+  pdfDoc      = doc;
+  pdfFilename = `Alarmprotokoll_${d.datumRaw}_S${d.szenario}_${d.baustelle.replace(/[^\w]/g,'_').slice(0,18)}.pdf`;
+  pdfB64      = doc.output('datauristring').split(',')[1];
+}
+
+function downloadPDF() { if (pdfDoc) pdfDoc.save(pdfFilename); }
+
+function resetForm() {
+  document.getElementById('form-view').style.display = 'block';
+  document.getElementById('success').style.display   = 'none';
+  document.getElementById('submit-btn').disabled = false;
+  ['baustelle','mitarbeiter','anzahl','beschreibung','massnahmen'].forEach(id =>
+    document.getElementById(id).value = '');
+  document.getElementById('polizei').value = 'Nein';
+  [1,2,3,4].forEach(i => document.getElementById('sc'+i).classList.remove('active'));
+  currentSc = null; images = [];
+  renderPreviews(); initForm();
+  window.scrollTo(0,0);
+}
+
+function setSpinner(on, txt='') {
+  document.getElementById('spinner').classList.toggle('show', on);
+  if (txt) document.getElementById('spinner-txt').textContent = txt;
+}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function fmtDate(d) { const [y,m,day]=d.split('-'); return `${day}.${m}.${y}`; }
+</script>
+
+</body>
+</html>
