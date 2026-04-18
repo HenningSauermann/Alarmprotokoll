@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -826,6 +827,7 @@ async function sendEmail(d) {
     sonstigeInfo:  d.sonstigeInfo || '',
     pdfBase64:     pdfB64,
     pdfFilename:   pdfFilename,
+    plainText:     true,
   };
 
   const res = await fetch(EDGE_URL, {
@@ -887,36 +889,12 @@ function buildPDF(d) {
 
   y = 38;
 
-  // SZENARIO BADGE
-  doc.setFillColor(...BG);
-  doc.rect(MAR, y, CW, 18, 'F');
-  doc.setFillColor(...ACC);
-  doc.rect(MAR, y, 3, 18, 'F');
-
-  doc.setFont('helvetica','bold');
-  doc.setFontSize(8.5);
-  doc.setTextColor(...ACC);
-  doc.text(SC_SHORT[d.szenario].toUpperCase(), MAR+7, y+7);
-  doc.setFont('helvetica','normal');
-  doc.setFontSize(8);
-  doc.setTextColor(...LGRAY);
-  const scLines = doc.splitTextToSize(SC_LABELS[d.szenario], CW-14);
-  doc.text(scLines[0], MAR+7, y+13);
-  if (scLines[1]) doc.text(scLines[1], MAR+7, y+18);
-
-  doc.setDrawColor(...BORDER);
-  doc.setLineWidth(0.3);
-  doc.rect(MAR, y, CW, 18);
-
-  y += 24;
-
   // DATENTABELLE
   const rows = [
-    ['ORT',              d.baustelle],
-    ['DATUM',            d.datum],
-    ['UHRZEIT',          `${d.uhrzeit} Uhr`],
-    ['EINSATZTYP',       d.einsatztyp],
-    ['BEARBEITER',       d.bearbeiter],
+    ['ORT',          d.baustelle],
+    ['DATUM',        d.datum],
+    ['UHRZEIT',      `${d.uhrzeit} Uhr`],
+    ['BEARBEITER',   d.bearbeiter],
   ];
   const rh = 9;
   rows.forEach(([k,v], i) => {
