@@ -951,28 +951,24 @@ function buildPDF(d) {
     y += 5;
     const IW = (CW-6)/3;
     let xi = 0;
-    // Use an offscreen canvas to get natural image dimensions
-    for (const src of images) {
-      await new Promise(resolve => {
-        const imgEl = new Image();
-        imgEl.onload = () => {
-          const ratio = imgEl.naturalHeight / imgEl.naturalWidth;
-          const IH = IW * ratio;
-          const bx = MAR + xi*(IW+3);
-          if (y+IH > 278) { doc.addPage(); y=16; xi=0; }
-          try {
-            doc.addImage(src,'JPEG',bx,y,IW,IH,'','MEDIUM');
-            doc.setDrawColor(...BORDER); doc.setLineWidth(0.3);
-            doc.rect(bx,y,IW,IH);
-          } catch(e){}
-          xi++;
-          if (xi===3){ xi=0; y+=IH+3; }
-          resolve(null);
-        };
-        imgEl.onerror = () => resolve(null);
-        imgEl.src = src;
-      });
-    }
+    images.forEach(src => {
+      // Preserve natural aspect ratio via temporary Image element
+      const tmpImg = new Image();
+      tmpImg.src = src;
+      const ratio = (tmpImg.naturalHeight && tmpImg.naturalWidth)
+        ? tmpImg.naturalHeight / tmpImg.naturalWidth
+        : 0.75;
+      const IH = IW * ratio;
+      const bx = MAR + xi*(IW+3);
+      if (y+IH > 278) { doc.addPage(); y=16; xi=0; }
+      try {
+        doc.addImage(src,'JPEG',bx,y,IW,IH,'','MEDIUM');
+        doc.setDrawColor(...BORDER); doc.setLineWidth(0.3);
+        doc.rect(bx,y,IW,IH);
+      } catch(e){}
+      xi++;
+      if (xi===3){ xi=0; y+=IH+3; }
+    });
     if (xi>0) y+=IW*0.75+3;
     y+=6;
   }
