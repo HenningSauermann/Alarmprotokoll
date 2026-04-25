@@ -615,7 +615,7 @@
         </div>
         <p>
           Das PDF-Protokoll wird nach dem Absenden direkt an<br>
-          <strong>h.sanders@sicherheitsdienst-sauermann.de</strong> gesendet.<br>
+          <strong>m.sauermann@sicherheitsdienst-sauermann.de</strong> gesendet.<br>
           <small>Mark Sauermann prüft und gibt die Kunden-E-Mail danach frei.</small>
         </p>
       </div>
@@ -629,7 +629,7 @@
     <div id="success">
       <div class="succ-icon">✓</div>
       <h2 class="succ-title" id="succ-title">Protokoll gesendet!</h2>
-      <p class="succ-txt" id="succ-txt">Das PDF wurde erfolgreich an<br><strong>h.sanders@sicherheitsdienst-sauermann.de</strong> gesendet.</p>
+      <p class="succ-txt" id="succ-txt">Das PDF wurde erfolgreich an<br><strong>m.sauermann@sicherheitsdienst-sauermann.de</strong> gesendet.</p>
       <div class="action-btns">
         <button class="btn-act btn-dl" onclick="downloadPDF()">📄 PDF herunterladen</button>
         <button class="btn-reset" onclick="resetForm()">↩ Neues Protokoll erstellen</button>
@@ -800,7 +800,7 @@ async function submitForm() {
     await sendEmail(data);
     document.getElementById('succ-title').textContent = 'Protokoll gesendet!';
     document.getElementById('succ-txt').innerHTML =
-      'Das PDF wurde erfolgreich an<br><strong>h.sanders@sicherheitsdienst-sauermann.de</strong> gesendet.';
+      'Das PDF wurde erfolgreich an<br><strong>m.sauermann@sicherheitsdienst-sauermann.de</strong> gesendet.';
   } catch(e) {
     document.getElementById('succ-title').textContent = 'PDF erstellt';
     document.getElementById('succ-txt').innerHTML =
