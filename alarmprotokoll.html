@@ -643,8 +643,8 @@
 // ═══════════════════════════════════════════════════════
 //  ⚙️  SUPABASE EDGE FUNCTION
 // ═══════════════════════════════════════════════════════
-const EDGE_URL = 'https://lgqzfagxdwczcejstpxx.supabase.co/functions/v1/send-alarmprotokoll';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxncXpmYWd4ZHdjemNlanN0cHh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwOTE0MDQsImV4cCI6MjA5MTY2NzQwNH0.0jsCR9h3C2x8QU6UKd906-MLWbsi3KVntAIX7eBPnvk';
+const EDGE_URL = 'https://aixuxxoinxxshehiqfeg.supabase.co/functions/v1/send-alarmprotokoll';
+const SUPABASE_ANON_KEY = 'sb_publishable_Hpi-oXFuESEdkT5g2CFSTg_KxpGY9ch';
 // ═══════════════════════════════════════════════════════
 
 document.getElementById('setup-banner').classList.add('hidden');
@@ -831,7 +831,7 @@ async function sendEmail(d) {
     method:  'POST',
     headers: {
       'Content-Type':  'application/json',
-      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      'apikey':        SUPABASE_ANON_KEY,
     },
     body: JSON.stringify(payload),
   });
